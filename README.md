@@ -1,51 +1,111 @@
-# Домашнее задание к занятию "`Название занятия`" - `Фамилия и имя студента`
+# Домашнее задание к занятию "`Сетевое взаимодействие в Kubernetes`" - ` Татаринцев Алексей`
 
 
-### Инструкция по выполнению домашнего задания
-
-   1. Сделайте `fork` данного репозитория к себе в Github и переименуйте его по названию или номеру занятия, например, https://github.com/имя-вашего-репозитория/git-hw или  https://github.com/имя-вашего-репозитория/7-1-ansible-hw).
-   2. Выполните клонирование данного репозитория к себе на ПК с помощью команды `git clone`.
-   3. Выполните домашнее задание и заполните у себя локально этот файл README.md:
-      - впишите вверху название занятия и вашу фамилию и имя
-      - в каждом задании добавьте решение в требуемом виде (текст/код/скриншоты/ссылка)
-      - для корректного добавления скриншотов воспользуйтесь [инструкцией "Как вставить скриншот в шаблон с решением](https://github.com/netology-code/sys-pattern-homework/blob/main/screen-instruction.md)
-      - при оформлении используйте возможности языка разметки md (коротко об этом можно посмотреть в [инструкции  по MarkDown](https://github.com/netology-code/sys-pattern-homework/blob/main/md-instruction.md))
-   4. После завершения работы над домашним заданием сделайте коммит (`git commit -m "comment"`) и отправьте его на Github (`git push origin`);
-   5. Для проверки домашнего задания преподавателем в личном кабинете прикрепите и отправьте ссылку на решение в виде md-файла в вашем Github.
-   6. Любые вопросы по выполнению заданий спрашивайте в чате учебной группы и/или в разделе “Вопросы по заданию” в личном кабинете.
-   
-Желаем успехов в выполнении домашнего задания!
-   
-### Дополнительные материалы, которые могут быть полезны для выполнения задания
-
-1. [Руководство по оформлению Markdown файлов](https://gist.github.com/Jekins/2bf2d0638163f1294637#Code)
 
 ---
 
 ### Задание 1
 
-`Приведите ответ в свободной форме........`
 
-1. `Заполните здесь этапы выполнения, если требуется ....`
-2. `Заполните здесь этапы выполнения, если требуется ....`
-3. `Заполните здесь этапы выполнения, если требуется ....`
-4. `Заполните здесь этапы выполнения, если требуется ....`
-5. `Заполните здесь этапы выполнения, если требуется ....`
-6. 
+1. `Пишу манифест deployment-multi-container.yaml`
 
 ```
-Поле для вставки кода...
-....
-....
-....
-....
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multi-container-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: multi-container-app
+  template:
+    metadata:
+      labels:
+        app: multi-container-app
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+        - name: multitool
+          image: wbitt/network-multitool:latest
+          env:
+            - name: HTTP_PORT
+              value: "8080"
+          ports:
+            - containerPort: 8080
+
 ```
 
-`При необходимости прикрепитe сюда скриншоты
-![Название скриншота 1](ссылка на скриншот 1)`
+2. `Пишу манифест service-clusterip.yaml`
 
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: multiapp-clusterip
+spec:
+  selector:
+    app: multi-container-app
+  ports:
+    - name: nginx
+      port: 9001
+      targetPort: 80
+      protocol: TCP
+    - name: multitool
+      port: 9002
+      targetPort: 8080
+      protocol: TCP
+  type: ClusterIP
 
----
+```
+3. `Пишу последний манифест service-nodeport.yaml`
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: multiapp-nginx-nodeport
+spec:
+  selector:
+    app: multi-container-app
+  type: NodePort
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: 30080   # допустимый диапазон 30000–32767
+      protocol: TCP
+
+```
+4. `Запускаем манифесты и проверяем`
+
+ ![1](https://github.com/Foxbeerxxx/network_Kubernetes/blob/main/img/img1.png)
+
+5. `Проверка доступа изнутри кластера:`
+
+```
+kubectl run test-pod --image=wbitt/network-multitool:latest --rm -it --restart=Never -- sh
+# внутри test-pod:
+curl -s multiapp-clusterip:9001   # должен вернуть html nginx
+curl -s multiapp-clusterip:9002   # должен вернуть multitool
+exit
+
+```
+ ![2](https://github.com/Foxbeerxxx/network_Kubernetes/blob/main/img/img2.png)
+
+6. `Пробую доступ из вне `
+
+```
+Узнай IP ноды:
+kubectl get nodes -o wide
+Проверь доступ:
+curl http://192.168.1.140:30080
+```
+ ![3](https://github.com/Foxbeerxxx/network_Kubernetes/blob/main/img/img3.png)
+
 
 ### Задание 2
 
